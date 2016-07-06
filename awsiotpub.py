@@ -10,29 +10,28 @@
 # that will subscribe and show all the messages sent by this program
 
 import paho.mqtt.client as paho
-import os
-import socket
 import ssl
+import string
+import threading
+import random
 from time import sleep
 from random import uniform
 
 connflag = False
 
+
 def on_connect(client, userdata, flags, rc):
     global connflag
     connflag = True
-    print("Connection returned result: " + str(rc) )
+    print("Connection returned result: " + str(rc))
+
 
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
 
-#def on_log(client, userdata, level, buf):
-#    print(msg.topic+" "+str(msg.payload))
-
 mqttc = paho.Client()
 mqttc.on_connect = on_connect
 mqttc.on_message = on_message
-#mqttc.on_log = on_log
 
 awshost = "data.iot.eu-west-1.amazonaws.com"
 awsport = 8883
@@ -42,17 +41,38 @@ caPath = "aws-iot-rootCA.crt"
 certPath = "cert.pem"
 keyPath = "privkey.pem"
 
-mqttc.tls_set(caPath, certfile=certPath, keyfile=keyPath, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
+mqttc.tls_set(caPath, certfile=certPath, keyfile=keyPath, cert_reqs=ssl.CERT_REQUIRED,
+              tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
 
 mqttc.connect(awshost, awsport, keepalive=60)
 
 mqttc.loop_start()
 
-while 1==1:
-    sleep(0.5)
-    if connflag == True:
-        tempreading = uniform(20.0,25.0)
-        mqttc.publish("temperature", tempreading, qos=1)
-        print("msg sent: temperature " + "%.2f" % tempreading )
-    else:
-        print("waiting for connection...")
+def randomstring(size=6, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
+def send_temperature():
+    while True:
+        sleep(0.5)
+        if connflag:
+            tempreading = uniform(20.0, 25.0)
+            mqttc.publish("someId/temperature", tempreading, qos=1)
+            print("msg sent: someId/temperature " + "%.2f" % tempreading)
+        else:
+            print("waiting for connection...")
+
+def send_random_stuff():
+    while True:
+        sleep(3.0)
+        if connflag:
+            randstring = randomstring()
+            mqttc.publish("someId/otherinfo", randstring, qos=1)
+            print("msg sent to someId/otherinfo: %s" % randstring)
+        else:
+            print("waiting for connection...")
+
+t1 = threading.Thread(target=send_temperature)
+t1.start()
+t2 = threading.Thread(target=send_random_stuff)
+t2.start()
+

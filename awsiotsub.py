@@ -12,12 +12,19 @@ import paho.mqtt.client as paho
 import os
 import socket
 import ssl
+import sys
+
+if len(sys.argv) <= 1:
+    print('Topic name required as the first argument')
+    sys.exit()
+else:
+    topic_name = sys.argv[1]
 
 def on_connect(client, userdata, flags, rc):
     print("Connection returned result: " + str(rc) )
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    client.subscribe("#" , 1 )
+    client.subscribe(topic_name , 1)
 
 def on_message(client, userdata, msg):
     print("topic: "+msg.topic)
